@@ -46,8 +46,22 @@ function formatHourLabel(hour) {
   return `${displayHour}:00 ${suffix}`;
 }
 
+function format24HourLabel(hour) {
+  if (hour === 24) {
+    return "24:00";
+  }
+  return `${hour.toString().padStart(2, "0")}:00`;
+}
+
 function getHourNumber(timeValue) {
   return Number.parseInt(String(timeValue || "0").split(":")[0], 10);
+}
+
+function timeToMinutes(timeValue) {
+  const [hours, minutes] = String(timeValue || "00:00")
+    .split(":")
+    .map((value) => Number.parseInt(value, 10) || 0);
+  return (hours * 60) + minutes;
 }
 
 function todayIso() {
@@ -213,8 +227,43 @@ function renderDayStats(dayEntries) {
   `;
 }
 
-function buildEntryCard(entry) {
+function buildEntryCard(entry, options = {}) {
+  const compact = Boolean(options.compact);
+
+  if (compact) {
+    const card = document.createElement("article");
+    card.className = "entry-card timeline-entry-card";
+    const durationMinutes = Math.max(timeToMinutes(entry.end_time) - timeToMinutes(entry.start_time), 15);
+    card.classList.add(
+      durationMinutes < 60 ? "is-short" :
+      durationMinutes < 90 ? "is-medium" :
+      "is-long"
+    );
+    if (entry.type === "event") {
+      card.classList.add("is-event");
+    }
+
+    const subline =
+      entry.type === "lecture"
+        ? `Lecture ${entry.lecture_number}${entry.subject?.code ? ` · ${entry.subject.code}` : ""}`
+        : `${entry.event_category || "event"}${entry.subject?.code ? ` · ${entry.subject.code}` : ""}`;
+
+    const metaBits = [entry.faculty || "Faculty not listed", entry.location || "Location not listed"];
+
+    card.innerHTML = `
+      <div class="timeline-entry-topline">
+        <p class="timeline-entry-time">${entry.start_time} - ${entry.end_time}</p>
+        <p class="timeline-entry-status">${entry.type === "event" ? (entry.event_category || "event") : entry.schedule_status}</p>
+      </div>
+      <h3 class="entry-title">${entry.title}</h3>
+      <p class="entry-subline">${subline}</p>
+      <p class="timeline-entry-meta">${metaBits.join(" · ")}</p>
+    `;
+    return card;
+  }
+
   const fragment = els.entryTemplate.content.cloneNode(true);
+  const card = fragment.querySelector(".entry-card");
   fragment.querySelector(".entry-title").textContent = entry.title;
   fragment.querySelector(".entry-subline").textContent =
     entry.type === "lecture"
@@ -257,37 +306,84 @@ function buildEntryCard(entry) {
     )
     .join("");
 
-  return fragment;
+  return card;
 }
 
-function buildEmptyHourCard(hour) {
+function buildEmptyTimelineState() {
   const empty = document.createElement("article");
-  empty.className = "entry-card empty compact";
+  empty.className = "entry-card empty";
   empty.innerHTML = `
     <div class="entry-topline">
       <div>
-        <h3 class="entry-title">No scheduled item</h3>
-        <p class="entry-subline">Nothing starts during the ${formatHourLabel(hour)} block.</p>
+        <h3 class="entry-title">No schedule on this date</h3>
+        <p class="entry-subline">There are no lectures or events on ${formatHumanDate(state.selectedDate)}.</p>
       </div>
-      <span class="entry-chip">Free</span>
+      <span class="entry-chip">Free day</span>
     </div>
   `;
   return empty;
 }
 
-function buildLunchCard() {
-  const lunch = document.createElement("article");
-  lunch.className = "entry-card lunch compact";
-  lunch.innerHTML = `
-    <div class="entry-topline">
-      <div>
-        <h3 class="entry-title">Lunch Time</h3>
-        <p class="entry-subline">Compulsory break · 1:00 PM to 2:30 PM</p>
-      </div>
-      <span class="entry-chip">Break</span>
-    </div>
-  `;
-  return lunch;
+function layoutTimelineEntries(entries) {
+  const positioned = entries.map((entry) => {
+    const startMinutes = timeToMinutes(entry.start_time);
+    const endMinutes = Math.max(timeToMinutes(entry.end_time), startMinutes + 15);
+    return {
+      ...entry,
+      startMinutes,
+      endMinutes,
+      lane: 0,
+      laneCount: 1,
+    };
+  });
+
+  positioned.sort((left, right) => {
+    if (left.startMinutes !== right.startMinutes) {
+      return left.startMinutes - right.startMinutes;
+    }
+    if (left.endMinutes !== right.endMinutes) {
+      return right.endMinutes - left.endMinutes;
+    }
+    return left.title.localeCompare(right.title);
+  });
+
+  const clusters = [];
+  for (const item of positioned) {
+    const currentCluster = clusters[clusters.length - 1];
+    if (!currentCluster || item.startMinutes >= currentCluster.endMinutes) {
+      clusters.push({
+        items: [item],
+        endMinutes: item.endMinutes,
+      });
+      continue;
+    }
+
+    currentCluster.items.push(item);
+    currentCluster.endMinutes = Math.max(currentCluster.endMinutes, item.endMinutes);
+  }
+
+  for (const cluster of clusters) {
+    const laneEndTimes = [];
+    let maxLanes = 0;
+
+    for (const item of cluster.items) {
+      let lane = laneEndTimes.findIndex((endMinutes) => endMinutes <= item.startMinutes);
+      if (lane === -1) {
+        lane = laneEndTimes.length;
+        laneEndTimes.push(item.endMinutes);
+      } else {
+        laneEndTimes[lane] = item.endMinutes;
+      }
+      item.lane = lane;
+      maxLanes = Math.max(maxLanes, laneEndTimes.length);
+    }
+
+    for (const item of cluster.items) {
+      item.laneCount = maxLanes;
+    }
+  }
+
+  return positioned;
 }
 
 function renderTimeline() {
@@ -301,46 +397,75 @@ function renderTimeline() {
   els.timeline.innerHTML = "";
 
   const lunchSlot = state.schedule.slots.find((slot) => slot.kind === "lunch");
-
-  for (let hour = 0; hour < 24; hour += 1) {
-    const row = document.createElement("section");
-    row.className = "timeline-row";
-    const entries = dayEntries.filter((entry) => getHourNumber(entry.start_time) === hour);
-
-    const time = document.createElement("div");
-    time.className = "timeline-time";
-    time.innerHTML = `
-      <strong>${formatHourLabel(hour)}</strong>
-      <span>${hour.toString().padStart(2, "0")}:00</span>
-      <span>${(hour + 1).toString().padStart(2, "0")}:00</span>
-    `;
-
-    const rail = document.createElement("div");
-    rail.className = "timeline-rail";
-    rail.innerHTML = `<span class="timeline-node"></span>`;
-
-    const stack = document.createElement("div");
-    stack.className = "slot-stack";
-
-    if (lunchSlot && getHourNumber(lunchSlot.start_time) === hour) {
-      stack.appendChild(buildLunchCard());
-    }
-
-    if (entries.length) {
-      for (const entry of entries) {
-        stack.appendChild(buildEntryCard(entry));
-      }
-    }
-
-    if (!stack.children.length) {
-      stack.appendChild(buildEmptyHourCard(hour));
-    }
-
-    row.appendChild(time);
-    row.appendChild(rail);
-    row.appendChild(stack);
-    els.timeline.appendChild(row);
+  if (!dayEntries.length) {
+    els.timeline.appendChild(buildEmptyTimelineState());
+    return;
   }
+
+  const shell = document.createElement("div");
+  shell.className = "timeline-shell";
+
+  const scale = document.createElement("div");
+  scale.className = "timeline-scale";
+
+  const canvas = document.createElement("div");
+  canvas.className = "timeline-canvas";
+
+  for (let hour = 0; hour <= 24; hour += 1) {
+    const ratio = (hour / 24) * 100;
+
+    const label = document.createElement("div");
+    label.className = "timeline-scale-label";
+    label.style.top = `${ratio}%`;
+    label.textContent = format24HourLabel(hour);
+    scale.appendChild(label);
+
+    if (hour < 24) {
+      const line = document.createElement("div");
+      line.className = "timeline-hour-line";
+      line.style.top = `${ratio}%`;
+      canvas.appendChild(line);
+
+      const halfHourLine = document.createElement("div");
+      halfHourLine.className = "timeline-half-hour-line";
+      halfHourLine.style.top = `${((hour + 0.5) / 24) * 100}%`;
+      canvas.appendChild(halfHourLine);
+    }
+  }
+
+  if (lunchSlot) {
+    const lunchBand = document.createElement("div");
+    lunchBand.className = "timeline-lunch-band";
+    lunchBand.style.top = `${(timeToMinutes(lunchSlot.start_time) / (24 * 60)) * 100}%`;
+    lunchBand.style.height = `${((timeToMinutes(lunchSlot.end_time) - timeToMinutes(lunchSlot.start_time)) / (24 * 60)) * 100}%`;
+    lunchBand.innerHTML = `
+      <span>Lunch Time</span>
+      <small>${lunchSlot.start_time} - ${lunchSlot.end_time}</small>
+    `;
+    canvas.appendChild(lunchBand);
+  }
+
+  const positionedEntries = layoutTimelineEntries(dayEntries);
+  for (const entry of positionedEntries) {
+    const entryCard = buildEntryCard(entry, { compact: true });
+    entryCard.classList.add("timeline-entry");
+
+    const top = (entry.startMinutes / (24 * 60)) * 100;
+    const height = ((entry.endMinutes - entry.startMinutes) / (24 * 60)) * 100;
+    const laneWidth = 100 / entry.laneCount;
+    const laneLeft = laneWidth * entry.lane;
+
+    entryCard.style.top = `${top}%`;
+    entryCard.style.height = `${height}%`;
+    entryCard.style.left = `calc(${laneLeft}% + 8px)`;
+    entryCard.style.width = `calc(${laneWidth}% - 16px)`;
+
+    canvas.appendChild(entryCard);
+  }
+
+  shell.appendChild(scale);
+  shell.appendChild(canvas);
+  els.timeline.appendChild(shell);
 }
 
 function render() {
