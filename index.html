@@ -6,7 +6,7 @@
     <title>Static Schedule</title>
     <link rel="stylesheet" href="style.css" />
   </head>
-  <body>
+  <body class="mobile-view">
     <div class="site-shell">
       <header class="hero">
         <div>
@@ -17,6 +17,13 @@
             attendance tracker data. It shows the live timetable snapshot only: no login,
             no attendance actions, and no database needed at runtime.
           </p>
+          <div class="hero-actions">
+            <div class="view-toggle" role="group" aria-label="Choose layout view">
+              <button class="button ghost toggle-button" id="mobile-view-button" type="button">Mobile View</button>
+              <button class="button ghost toggle-button" id="desktop-view-button" type="button">Desktop View</button>
+            </div>
+            <a class="button ghost admin-shortcut" href="admin.html">Open Admin Editor</a>
+          </div>
         </div>
         <div class="hero-meta" id="hero-meta">
           <div class="summary-card">

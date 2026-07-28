@@ -3,9 +3,11 @@ const state = {
   monthCursor: null,
   selectedDate: null,
   subjectFilter: "all",
+  viewMode: "mobile",
 };
 
 const els = {
+  body: document.body,
   generatedAt: document.getElementById("generated-at"),
   coverageRange: document.getElementById("coverage-range"),
   entryCount: document.getElementById("entry-count"),
@@ -21,8 +23,12 @@ const els = {
   prevMonth: document.getElementById("prev-month"),
   nextMonth: document.getElementById("next-month"),
   todayButton: document.getElementById("today-button"),
+  mobileViewButton: document.getElementById("mobile-view-button"),
+  desktopViewButton: document.getElementById("desktop-view-button"),
   entryTemplate: document.getElementById("entry-template"),
 };
+
+const VIEW_MODE_STORAGE_KEY = "static-schedule-view-mode";
 
 function formatHumanDate(isoDate) {
   return new Date(`${isoDate}T00:00:00`).toLocaleDateString(undefined, {
@@ -248,16 +254,27 @@ function buildEntryCard(entry, options = {}) {
         ? `Lecture ${entry.lecture_number}${entry.subject?.code ? ` · ${entry.subject.code}` : ""}`
         : `${entry.event_category || "event"}${entry.subject?.code ? ` · ${entry.subject.code}` : ""}`;
 
-    const metaBits = [entry.faculty || "Faculty not listed", entry.location || "Location not listed"];
+    const timingLine = `${entry.start_time} - ${entry.end_time}`;
+    const detailBits = [entry.faculty || "Faculty not listed", entry.location || "Location not listed"];
+    const showDetails = durationMinutes >= 90;
+    const showSubline = durationMinutes >= 55;
+    const statusText =
+      entry.type === "event"
+        ? (entry.event_category || "Event")
+        : entry.is_cancelled
+          ? "Cancelled"
+          : entry.is_extra
+            ? "Extra"
+            : "";
 
     card.innerHTML = `
       <div class="timeline-entry-topline">
-        <p class="timeline-entry-time">${entry.start_time} - ${entry.end_time}</p>
-        <p class="timeline-entry-status">${entry.type === "event" ? (entry.event_category || "event") : entry.schedule_status}</p>
+        <p class="timeline-entry-time">${timingLine}</p>
+        ${statusText ? `<p class="timeline-entry-status">${statusText}</p>` : ""}
       </div>
       <h3 class="entry-title">${entry.title}</h3>
-      <p class="entry-subline">${subline}</p>
-      <p class="timeline-entry-meta">${metaBits.join(" · ")}</p>
+      ${showSubline ? `<p class="entry-subline">${subline}</p>` : ""}
+      <p class="timeline-entry-meta">${showDetails ? detailBits.join(" · ") : subline}</p>
     `;
     return card;
   }
@@ -457,8 +474,13 @@ function renderTimeline() {
 
     entryCard.style.top = `${top}%`;
     entryCard.style.height = `${height}%`;
-    entryCard.style.left = `calc(${laneLeft}% + 8px)`;
-    entryCard.style.width = `calc(${laneWidth}% - 16px)`;
+    if (entry.laneCount === 1) {
+      entryCard.style.left = "16px";
+      entryCard.style.width = "min(620px, calc(100% - 32px))";
+    } else {
+      entryCard.style.left = `calc(${laneLeft}% + 8px)`;
+      entryCard.style.width = `calc(${laneWidth}% - 16px)`;
+    }
 
     canvas.appendChild(entryCard);
   }
@@ -475,7 +497,41 @@ function render() {
   renderTimeline();
 }
 
+function updateViewButtons() {
+  const isMobile = state.viewMode === "mobile";
+  els.mobileViewButton.classList.toggle("is-active", isMobile);
+  els.desktopViewButton.classList.toggle("is-active", !isMobile);
+  els.mobileViewButton.setAttribute("aria-pressed", String(isMobile));
+  els.desktopViewButton.setAttribute("aria-pressed", String(!isMobile));
+}
+
+function applyViewMode(viewMode, persistPreference = true) {
+  state.viewMode = viewMode === "desktop" ? "desktop" : "mobile";
+  els.body.classList.toggle("mobile-view", state.viewMode === "mobile");
+  els.body.classList.toggle("desktop-view", state.viewMode === "desktop");
+  updateViewButtons();
+
+  if (persistPreference) {
+    try {
+      window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, state.viewMode);
+    } catch (_error) {
+      // Ignore localStorage failures and keep the current in-memory view mode.
+    }
+  }
+}
+
+function preferredViewMode() {
+  try {
+    const savedValue = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+    return savedValue === "desktop" ? "desktop" : "mobile";
+  } catch (_error) {
+    return "mobile";
+  }
+}
+
 async function init() {
+  applyViewMode(preferredViewMode(), false);
+
   if (window.__STATIC_SCHEDULE_DATA__) {
     state.schedule = window.__STATIC_SCHEDULE_DATA__;
   } else {
@@ -513,6 +569,14 @@ async function init() {
     state.selectedDate = chooseInitialDate();
     state.monthCursor = parseMonthCursor(monthKeyFromDate(state.selectedDate));
     render();
+  });
+
+  els.mobileViewButton.addEventListener("click", () => {
+    applyViewMode("mobile");
+  });
+
+  els.desktopViewButton.addEventListener("click", () => {
+    applyViewMode("desktop");
   });
 }
 
