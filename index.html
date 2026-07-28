@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Static Schedule</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Static Schedule Snapshot</p>
+          <h1>TAPMI schedule, without the app backend</h1>
+          <p class="hero-copy">
+            This is a standalone Netlify-ready schedule site generated from the current
+            attendance tracker data. It shows the live timetable snapshot only: no login,
+            no attendance actions, and no database needed at runtime.
+          </p>
+        </div>
+        <div class="hero-meta" id="hero-meta">
+          <div class="summary-card">
+            <span class="summary-label">Generated</span>
+            <strong id="generated-at">--</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Coverage</span>
+            <strong id="coverage-range">--</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Entries</span>
+            <strong id="entry-count">--</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="toolbar panel">
+        <div class="toolbar-row">
+          <div class="month-picker">
+            <button class="button ghost" id="prev-month" type="button">Previous</button>
+            <div>
+              <p class="eyebrow">Month</p>
+              <h2 id="month-label">--</h2>
+            </div>
+            <button class="button ghost" id="next-month" type="button">Next</button>
+          </div>
+
+          <div class="filters">
+            <label class="field">
+              <span>Subject</span>
+              <select id="subject-filter">
+                <option value="all">All subjects and events</option>
+              </select>
+            </label>
+            <button class="button primary" id="today-button" type="button">Jump to Today</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel panel-large calendar-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Monthly Calendar</p>
+            <h2 id="calendar-heading">--</h2>
+            <p class="section-note">
+              Each dot is a schedule entry. Select a day to open the full 8-slot timeline right below.
+            </p>
+          </div>
+        </div>
+        <div class="calendar-grid" id="calendar-grid"></div>
+        <div class="calendar-day-summary">
+          <div>
+            <p class="eyebrow">Selected Day</p>
+            <h2 id="selected-day-heading">--</h2>
+          </div>
+          <div class="day-stats" id="day-stats"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Daily Timeline</p>
+            <h2 id="timeline-heading">--</h2>
+            <p class="section-note">
+              The day view always shows the same 8-slot layout as the Flask app, including lunch time.
+            </p>
+          </div>
+        </div>
+        <div class="timeline" id="timeline"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Subjects</p>
+            <h2>Current timetable map</h2>
+            <p class="section-note">
+              A compact subject overview for the semester. Use the calendar and timeline above for the day-to-day schedule.
+            </p>
+          </div>
+        </div>
+        <div class="subject-list" id="subject-list"></div>
+      </section>
+    </div>
+
+    <template id="entry-template">
+      <article class="entry-card">
+        <div class="entry-topline">
+          <div>
+            <h3 class="entry-title"></h3>
+            <p class="entry-subline"></p>
+          </div>
+          <span class="entry-chip"></span>
+        </div>
+        <div class="entry-details"></div>
+      </article>
+    </template>
+
+    <script src="schedule-data.js"></script>
+    <script src="script.js"></script>
+  </body>
+  </html>

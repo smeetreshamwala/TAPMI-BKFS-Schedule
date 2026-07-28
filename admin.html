@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Schedule Admin</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="hero admin-hero">
+        <div>
+          <p class="eyebrow">Single Admin Editor</p>
+          <h1>Update events and save straight to GitHub</h1>
+          <p class="hero-copy">
+            This editor is intentionally simple: one shared password, one Netlify Function,
+            and one GitHub-backed `schedule.json`.
+          </p>
+        </div>
+        <div class="hero-meta">
+          <div class="summary-card">
+            <span class="summary-label">Writes to</span>
+            <strong>`schedule.json`</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Deploy flow</span>
+            <strong>GitHub commit → Netlify redeploy</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="panel admin-panel" id="auth-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Password Gate</p>
+            <h2>Unlock the editor</h2>
+            <p class="section-note">
+              The password is checked server-side by the Netlify Function. Nothing is editable until that check passes.
+            </p>
+          </div>
+        </div>
+        <form id="auth-form" class="admin-form compact-form">
+          <label class="field field-wide">
+            <span>Admin password</span>
+            <input id="password-input" name="password" type="password" autocomplete="current-password" required />
+          </label>
+          <button class="button primary" type="submit">Open Editor</button>
+        </form>
+      </section>
+
+      <section class="panel admin-panel is-hidden" id="editor-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Editor</p>
+            <h2>Add, edit, or delete schedule events</h2>
+            <p class="section-note">
+              Only event entries are editable here. Imported lectures remain read-only in this tool.
+            </p>
+          </div>
+          <div class="button-row">
+            <button class="button ghost" id="refresh-button" type="button">Refresh</button>
+            <button class="button ghost" id="signout-button" type="button">Lock</button>
+          </div>
+        </div>
+
+        <div id="status-banner" class="status-banner is-hidden"></div>
+
+        <div class="admin-layout">
+          <section class="panel admin-subpanel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Event Form</p>
+                <h2 id="form-heading">Add new event</h2>
+              </div>
+            </div>
+            <form id="event-form" class="admin-form">
+              <input type="hidden" id="event-id" name="eventId" />
+              <label class="field">
+                <span>Title</span>
+                <input id="title-input" name="title" type="text" required />
+              </label>
+              <label class="field">
+                <span>Date</span>
+                <input id="date-input" name="date" type="date" required />
+              </label>
+              <div class="field-row">
+                <label class="field">
+                  <span>Start time</span>
+                  <input id="start-time-input" name="startTime" type="time" required />
+                </label>
+                <label class="field">
+                  <span>End time</span>
+                  <input id="end-time-input" name="endTime" type="time" required />
+                </label>
+              </div>
+              <div class="field-row">
+                <label class="field">
+                  <span>Category</span>
+                  <select id="category-input" name="category">
+                    <option value="general">General</option>
+                    <option value="exam">Exam</option>
+                    <option value="quiz">Quiz</option>
+                    <option value="guest_lecture">Guest lecture</option>
+                    <option value="pace_meeting">PACE meeting</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Linked subject</span>
+                  <select id="subject-input" name="subjectId">
+                    <option value="">No linked subject</option>
+                  </select>
+                </label>
+              </div>
+              <label class="field">
+                <span>Location</span>
+                <input id="location-input" name="location" type="text" />
+              </label>
+              <label class="field">
+                <span>Notes</span>
+                <textarea id="notes-input" name="notes" rows="4"></textarea>
+              </label>
+              <div class="button-row">
+                <button class="button primary" id="save-button" type="submit">Save Event</button>
+                <button class="button ghost" id="cancel-edit-button" type="button">Clear Form</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel admin-subpanel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Current Events</p>
+                <h2 id="event-count-heading">--</h2>
+              </div>
+            </div>
+            <div class="event-list" id="event-list"></div>
+          </section>
+        </div>
+      </section>
+    </div>
+
+    <template id="event-row-template">
+      <article class="event-row">
+        <div class="event-row-main">
+          <div class="event-row-topline">
+            <h3 class="event-row-title"></h3>
+            <span class="event-row-chip"></span>
+          </div>
+          <p class="event-row-meta"></p>
+          <p class="event-row-notes"></p>
+        </div>
+        <div class="button-row">
+          <button class="button ghost event-edit-button" type="button">Edit</button>
+          <button class="button ghost event-delete-button" type="button">Delete</button>
+        </div>
+      </article>
+    </template>
+
+    <script src="admin.js"></script>
+  </body>
+  </html>

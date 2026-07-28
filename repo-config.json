@@ -1,0 +1,7 @@
+{
+  "owner": "smeetreshamwala",
+  "repo": "TAPMI-BKFS-Schedule",
+  "branch": "main",
+  "schedulePath": "schedule.json",
+  "embeddedPath": "schedule-data.js"
+}
