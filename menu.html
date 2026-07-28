@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TAPMI BKFS 25-27 | Menu</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="menu-page">
+    <div class="site-shell">
+      <nav class="site-nav panel" aria-label="Primary">
+        <a class="nav-link" href="today.html">Today</a>
+        <a class="nav-link" href="calendar.html">Calendar</a>
+        <a class="nav-link" href="courses.html">Courses</a>
+        <a class="nav-link" href="cohort.html">Cohort</a>
+        <a class="nav-link is-active" href="menu.html" aria-current="page">Menu</a>
+      </nav>
+
+      <header class="hero menu-hero">
+        <div>
+          <p class="eyebrow">Menu</p>
+          <h1>TAPMI BKFS 25-27</h1>
+          <p class="section-note">Breakfast, lunch, and dinner stay on their own page so the class schedule remains clean.</p>
+        </div>
+        <div class="hero-meta">
+          <div class="summary-card">
+            <span class="summary-label">Default day</span>
+            <strong id="menu-default-day">--</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Today</span>
+            <strong id="menu-today-label">--</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Meals shown</span>
+            <strong>Breakfast, Lunch, Dinner</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Browse Days</p>
+            <h2 id="menu-selected-heading">--</h2>
+            <p class="section-note">
+              The menu opens on today's day first. You can switch to any other day of the week below.
+            </p>
+          </div>
+        </div>
+        <div class="menu-day-picker" id="menu-day-picker"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Meals</p>
+            <h2 id="menu-day-title">--</h2>
+          </div>
+        </div>
+        <div class="menu-meal-list" id="menu-meal-list"></div>
+      </section>
+    </div>
+
+    <script src="menu-data.js"></script>
+    <script src="menu.js"></script>
+  </body>
+  </html>

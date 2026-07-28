@@ -1,17 +1,23 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
+
+from openpyxl import load_workbook
 
 
 ROOT_DIR = Path(__file__).resolve().parent
 APP_DIR = ROOT_DIR.parent / "attendance_tracker_app"
 DB_PATH = APP_DIR / "attendance.db"
-OUTPUT_PATH = ROOT_DIR / "schedule.json"
-EMBEDDED_OUTPUT_PATH = ROOT_DIR / "schedule-data.js"
+ROSTER_WORKBOOK_PATH = APP_DIR / "List of students.xlsx"
+SCHEDULE_OUTPUT_PATH = ROOT_DIR / "schedule.json"
+SCHEDULE_EMBEDDED_OUTPUT_PATH = ROOT_DIR / "schedule-data.js"
+STUDENTS_OUTPUT_PATH = ROOT_DIR / "students.json"
+STUDENTS_EMBEDDED_OUTPUT_PATH = ROOT_DIR / "students-data.js"
 
 TIMELINE_SLOTS = [
     {"label": "Slot 1", "start_time": "08:45", "end_time": "10:00", "kind": "lecture"},
@@ -23,6 +29,8 @@ TIMELINE_SLOTS = [
     {"label": "Slot 6", "start_time": "17:45", "end_time": "19:00", "kind": "lecture"},
     {"label": "Slot 7", "start_time": "19:15", "end_time": "20:30", "kind": "lecture"},
 ]
+
+STUDENT_CODE_PATTERN = re.compile(r"^25B\d{3}$", re.IGNORECASE)
 
 
 def load_subjects(connection: sqlite3.Connection) -> dict[int, dict[str, Any]]:
@@ -216,6 +224,126 @@ def load_special_event_entries(connection: sqlite3.Connection, subjects: dict[in
     return entries
 
 
+def normalize_header(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(value or "").strip().lower())
+
+
+def resolve_header_index(header_map: dict[str, int], *keys: str) -> int | None:
+    for key in keys:
+        if key in header_map:
+            return header_map[key]
+    return None
+
+
+def slugify(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.strip().lower()).strip("-")
+    return slug or "bkfs-core"
+
+
+def format_birthday(value: Any) -> str | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    text = str(value).strip()
+    if not text:
+        return None
+
+    for pattern in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%m/%d/%Y", "%d.%m.%Y"):
+        try:
+            return datetime.strptime(text, pattern).date().isoformat()
+        except ValueError:
+            continue
+    return text
+
+
+def load_student_directory(subjects: dict[int, dict[str, Any]]) -> dict[str, Any]:
+    if not ROSTER_WORKBOOK_PATH.exists():
+        raise FileNotFoundError(f"Could not find roster workbook at {ROSTER_WORKBOOK_PATH}")
+
+    workbook = load_workbook(ROSTER_WORKBOOK_PATH, data_only=True)
+    worksheet = workbook["List of Students"] if "List of Students" in workbook.sheetnames else workbook[workbook.sheetnames[0]]
+    rows = list(worksheet.iter_rows(values_only=True))
+    if not rows:
+        raise ValueError("Roster workbook is empty.")
+
+    header_map = {normalize_header(header): index for index, header in enumerate(rows[0]) if header not in (None, "")}
+    code_index = resolve_header_index(header_map, "regno", "regno.")
+    roll_index = resolve_header_index(header_map, "rollno", "rollno.")
+    name_index = resolve_header_index(header_map, "fullnameasperinstituterecord", "fullname", "name")
+    birthday_index = resolve_header_index(header_map, "birthday", "dateofbirth", "dob")
+    section_index = resolve_header_index(header_map, "section", "track", "specialization", "batch")
+
+    if code_index is None or name_index is None:
+        raise ValueError("Roster workbook must include the student code and full name columns.")
+
+    all_course_ids = [subject["id"] for subject in sorted(subjects.values(), key=lambda item: (item["name"], item["code"]))]
+    students: list[dict[str, Any]] = []
+    section_names: set[str] = set()
+
+    for row in rows[1:]:
+        if not row:
+            continue
+        student_code = str(row[code_index] or "").strip().upper()
+        student_name = str(row[name_index] or "").strip()
+        if not student_code or not student_name or not STUDENT_CODE_PATTERN.match(student_code):
+            continue
+
+        section_name = str(row[section_index] or "").strip() if section_index is not None and row[section_index] not in (None, "") else "BKFS Core"
+        section_id = slugify(section_name)
+        section_names.add(section_name)
+
+        students.append(
+            {
+                "id": student_code.lower(),
+                "student_code": student_code,
+                "roll_no": str(row[roll_index]).strip() if roll_index is not None and row[roll_index] not in (None, "") else "",
+                "name": student_name.title(),
+                "birthday": format_birthday(row[birthday_index]) if birthday_index is not None else None,
+                "section_id": section_id,
+                "section_name": section_name,
+                "course_ids": all_course_ids,
+                "tags": [],
+            }
+        )
+
+    students.sort(key=lambda item: item["student_code"])
+    sections = [
+        {
+            "id": slugify(section_name),
+            "name": section_name,
+            "term": "Term 4",
+            "notes": "",
+        }
+        for section_name in sorted(section_names)
+    ] or [
+        {
+            "id": "bkfs-core",
+            "name": "BKFS Core",
+            "term": "Term 4",
+            "notes": "",
+        }
+    ]
+
+    default_student_code = "25B147" if any(student["student_code"] == "25B147" for student in students) else (students[0]["student_code"] if students else None)
+
+    return {
+        "generated_at": datetime.now().replace(second=0, microsecond=0).isoformat(timespec="minutes"),
+        "program": "TAPMI BKFS 25-27",
+        "source": {
+            "type": "excel",
+            "workbook_path": str(ROSTER_WORKBOOK_PATH.relative_to(ROOT_DIR.parent)).replace("\\", "/"),
+            "sheet_name": worksheet.title,
+            "student_count": len(students),
+        },
+        "default_student_code": default_student_code,
+        "sections": sections,
+        "students": students,
+    }
+
+
 def main() -> None:
     if not DB_PATH.exists():
         raise FileNotFoundError(f"Could not find attendance database at {DB_PATH}")
@@ -228,7 +356,7 @@ def main() -> None:
         entries = sorted(lectures + events, key=lambda item: (item["date"], item["start_time"], item["title"]))
         all_dates = [entry["date"] for entry in entries]
 
-        payload = {
+        schedule_payload = {
             "generated_at": datetime.now().replace(second=0, microsecond=0).isoformat(timespec="minutes"),
             "source": {
                 "type": "sqlite",
@@ -247,15 +375,29 @@ def main() -> None:
             "entries": entries,
         }
 
-        json_text = json.dumps(payload, indent=2, ensure_ascii=False)
-        OUTPUT_PATH.write_text(json_text, encoding="utf-8")
-        EMBEDDED_OUTPUT_PATH.write_text(
-            f"window.__STATIC_SCHEDULE_DATA__ = {json_text};\n",
+        students_payload = load_student_directory(subjects)
+
+        schedule_json_text = json.dumps(schedule_payload, indent=2, ensure_ascii=False)
+        students_json_text = json.dumps(students_payload, indent=2, ensure_ascii=False)
+
+        SCHEDULE_OUTPUT_PATH.write_text(schedule_json_text, encoding="utf-8")
+        SCHEDULE_EMBEDDED_OUTPUT_PATH.write_text(
+            f"window.__STATIC_SCHEDULE_DATA__ = {schedule_json_text};\n",
             encoding="utf-8",
         )
-        print(f"Wrote {OUTPUT_PATH}")
-        print(f"Wrote {EMBEDDED_OUTPUT_PATH}")
-        print(f"Lectures: {len(lectures)} | Events: {len(events)} | Subjects: {len(subjects)}")
+        STUDENTS_OUTPUT_PATH.write_text(students_json_text, encoding="utf-8")
+        STUDENTS_EMBEDDED_OUTPUT_PATH.write_text(
+            f"window.__STUDENT_DIRECTORY_DATA__ = {students_json_text};\n",
+            encoding="utf-8",
+        )
+
+        print(f"Wrote {SCHEDULE_OUTPUT_PATH}")
+        print(f"Wrote {SCHEDULE_EMBEDDED_OUTPUT_PATH}")
+        print(f"Wrote {STUDENTS_OUTPUT_PATH}")
+        print(f"Wrote {STUDENTS_EMBEDDED_OUTPUT_PATH}")
+        print(
+            f"Lectures: {len(lectures)} | Events: {len(events)} | Subjects: {len(subjects)} | Students: {students_payload['source']['student_count']}"
+        )
     finally:
         connection.close()
 

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TAPMI BKFS 25-27 | Cohort</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="site-shell">
+      <nav class="site-nav panel" aria-label="Primary">
+        <a class="nav-link" href="today.html">Today</a>
+        <a class="nav-link" href="calendar.html">Calendar</a>
+        <a class="nav-link" href="courses.html">Courses</a>
+        <a class="nav-link is-active" href="cohort.html" aria-current="page">Cohort</a>
+        <a class="nav-link" href="menu.html">Menu</a>
+      </nav>
+
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Cohort</p>
+          <h1>TAPMI BKFS 25-27</h1>
+          <p class="hero-copy">Upcoming birthdays across the cohort.</p>
+          <div class="hero-actions">
+            <button class="button ghost" id="switch-person-button" type="button">Switch Person</button>
+          </div>
+        </div>
+        <div class="hero-meta">
+          <div class="summary-card">
+            <span class="summary-label">Student</span>
+            <strong id="student-name">--</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Student code</span>
+            <strong id="student-code">--</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Section</span>
+            <strong id="student-section">--</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Profiles</span>
+            <strong id="cohort-count">--</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Sections</span>
+            <strong id="section-count">--</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Mapped subjects</span>
+            <strong id="student-course-count">--</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Next class</span>
+            <strong id="student-next-class">--</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Birthday Table</p>
+            <h2>Upcoming birthdays</h2>
+            <p class="section-note">Students with missing birthdays stay in the table with blanks.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Student Name</th>
+                <th>Birthday</th>
+                <th>Days Left</th>
+              </tr>
+            </thead>
+            <tbody id="birthday-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <script src="schedule-data.js"></script>
+    <script src="students-data.js"></script>
+    <script src="site-common.js"></script>
+    <script src="cohort.js"></script>
+  </body>
+  </html>

@@ -1,5 +1,5 @@
 window.__STATIC_SCHEDULE_DATA__ = {
-  "generated_at": "2026-07-28T12:59",
+  "generated_at": "2026-07-28T22:43",
   "source": {
     "type": "sqlite",
     "database_path": "attendance_tracker_app/attendance.db",
@@ -1446,6 +1446,39 @@ window.__STATIC_SCHEDULE_DATA__ = {
       }
     },
     {
+      "id": "event-4",
+      "raw_id": 4,
+      "type": "event",
+      "date": "2026-07-27",
+      "day_name": "Monday",
+      "day_type": "Instructional Day",
+      "start_time": "08:45",
+      "end_time": "10:00",
+      "slot_label": "Slot 1",
+      "title": "SMIC: KPD",
+      "subject": null,
+      "lecture_number": null,
+      "faculty": "",
+      "faculty_abbreviation": "",
+      "location": "G3",
+      "lecture_type": "",
+      "batch_division": "",
+      "attendance_tracked": false,
+      "schedule_status": "event",
+      "is_cancelled": false,
+      "is_extra": false,
+      "mandatory_label": "",
+      "stable_id": "SPECIAL|general|global|all|all|smic:_kpd|2026-07-27|08:45|10:00",
+      "event_category": "general",
+      "audience_scope": "all",
+      "audience_value": "",
+      "notes": "",
+      "source": {
+        "sheet": "Manual Event",
+        "cell": "Email"
+      }
+    },
+    {
       "id": "lecture-131",
       "raw_id": 131,
       "type": "lecture",
@@ -1653,39 +1686,6 @@ window.__STATIC_SCHEDULE_DATA__ = {
       "source": {
         "sheet": "MBA-BKFS",
         "cell": "D22"
-      }
-    },
-    {
-      "id": "event-4",
-      "raw_id": null,
-      "type": "event",
-      "date": "2026-07-27",
-      "day_name": "Monday",
-      "day_type": "",
-      "start_time": "21:00",
-      "end_time": "22:15",
-      "slot_label": "Custom Slot",
-      "title": "SMIC: KPD",
-      "subject": null,
-      "lecture_number": null,
-      "faculty": "",
-      "faculty_abbreviation": "",
-      "location": "G3",
-      "lecture_type": "",
-      "batch_division": "",
-      "attendance_tracked": false,
-      "schedule_status": "event",
-      "is_cancelled": false,
-      "is_extra": false,
-      "mandatory_label": "",
-      "stable_id": "SPECIAL|general|global|admin|smic-kpd|2026-07-27|21:00|22:15",
-      "event_category": "general",
-      "audience_scope": "all",
-      "audience_value": "",
-      "notes": "",
-      "source": {
-        "sheet": "Admin Editor",
-        "cell": ""
       }
     },
     {

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TAPMI BKFS 25-27 | Today</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="site-shell">
+      <nav class="site-nav panel" aria-label="Primary">
+        <a class="nav-link is-active" href="today.html" aria-current="page">Today</a>
+        <a class="nav-link" href="calendar.html">Calendar</a>
+        <a class="nav-link" href="courses.html">Courses</a>
+        <a class="nav-link" href="cohort.html">Cohort</a>
+        <a class="nav-link" href="menu.html">Menu</a>
+      </nav>
+
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Today</p>
+          <h1>TAPMI BKFS 25-27</h1>
+          <p class="hero-copy">Your day at TAPMI.</p>
+          <div class="hero-actions">
+            <button class="button ghost" id="switch-person-button" type="button">Switch Person</button>
+            <a class="button ghost admin-shortcut" href="admin.html">Open Admin Editor</a>
+          </div>
+        </div>
+        <div class="hero-meta">
+          <div class="summary-card">
+            <span class="summary-label">Student</span>
+            <strong id="student-name">--</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Student code</span>
+            <strong id="student-code">--</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Section</span>
+            <strong id="student-section">--</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Mapped subjects</span>
+            <strong id="student-course-count">--</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Next class</span>
+            <strong id="student-next-class">--</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Today Snapshot</p>
+            <h2 id="today-heading">--</h2>
+            <p class="section-note">Everything below is filtered to the logged-in student's mapped subjects.</p>
+          </div>
+        </div>
+        <div class="day-stats today-stats">
+          <article class="day-stat">
+            <span class="stat-label">Total items</span>
+            <strong id="today-count">--</strong>
+          </article>
+          <article class="day-stat">
+            <span class="stat-label">Lectures</span>
+            <strong id="today-lecture-count">--</strong>
+          </article>
+          <article class="day-stat">
+            <span class="stat-label">Events</span>
+            <strong id="today-event-count">--</strong>
+          </article>
+          <article class="day-stat">
+            <span class="stat-label">Next up</span>
+            <strong id="next-class-card">--</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Today's agenda</p>
+            <h2>Classes and events</h2>
+            <p class="section-note">Use Calendar for the full month.</p>
+          </div>
+        </div>
+        <div class="agenda-list" id="today-agenda"></div>
+      </section>
+    </div>
+
+    <script src="schedule-data.js"></script>
+    <script src="students-data.js"></script>
+    <script src="site-common.js"></script>
+    <script src="today.js"></script>
+  </body>
+  </html>

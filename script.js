@@ -1,16 +1,19 @@
 const state = {
   schedule: null,
+  directory: null,
+  selectedStudent: null,
   monthCursor: null,
   selectedDate: null,
   subjectFilter: "all",
-  viewMode: "mobile",
 };
 
 const els = {
-  body: document.body,
-  generatedAt: document.getElementById("generated-at"),
-  coverageRange: document.getElementById("coverage-range"),
-  entryCount: document.getElementById("entry-count"),
+  studentName: document.getElementById("student-name"),
+  studentCode: document.getElementById("student-code"),
+  studentSection: document.getElementById("student-section"),
+  studentCourseCount: document.getElementById("student-course-count"),
+  studentNextClass: document.getElementById("student-next-class"),
+  switchPersonButton: document.getElementById("switch-person-button"),
   monthLabel: document.getElementById("month-label"),
   calendarHeading: document.getElementById("calendar-heading"),
   selectedDayHeading: document.getElementById("selected-day-heading"),
@@ -19,59 +22,17 @@ const els = {
   dayStats: document.getElementById("day-stats"),
   timeline: document.getElementById("timeline"),
   subjectFilter: document.getElementById("subject-filter"),
-  subjectList: document.getElementById("subject-list"),
   prevMonth: document.getElementById("prev-month"),
   nextMonth: document.getElementById("next-month"),
   todayButton: document.getElementById("today-button"),
-  mobileViewButton: document.getElementById("mobile-view-button"),
-  desktopViewButton: document.getElementById("desktop-view-button"),
   entryTemplate: document.getElementById("entry-template"),
 };
-
-const VIEW_MODE_STORAGE_KEY = "static-schedule-view-mode";
-
-function formatHumanDate(isoDate) {
-  return new Date(`${isoDate}T00:00:00`).toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatMonthLabel(year, monthIndex) {
-  return new Date(year, monthIndex, 1).toLocaleDateString(undefined, {
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function formatHourLabel(hour) {
-  const suffix = hour >= 12 ? "PM" : "AM";
-  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-  return `${displayHour}:00 ${suffix}`;
-}
 
 function format24HourLabel(hour) {
   if (hour === 24) {
     return "24:00";
   }
   return `${hour.toString().padStart(2, "0")}:00`;
-}
-
-function getHourNumber(timeValue) {
-  return Number.parseInt(String(timeValue || "0").split(":")[0], 10);
-}
-
-function timeToMinutes(timeValue) {
-  const [hours, minutes] = String(timeValue || "00:00")
-    .split(":")
-    .map((value) => Number.parseInt(value, 10) || 0);
-  return (hours * 60) + minutes;
-}
-
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
 }
 
 function monthKeyFromDate(isoDate) {
@@ -83,108 +44,98 @@ function parseMonthCursor(value) {
   return { year, monthIndex: month - 1 };
 }
 
-function buildDate(isoDate) {
-  return new Date(`${isoDate}T00:00:00`);
-}
-
 function filteredEntries() {
-  const entries = state.schedule.entries;
+  const studentEntries = window.SiteCommon.getEntriesForStudent(state.schedule, state.selectedStudent);
   if (state.subjectFilter === "all") {
-    return entries;
+    return studentEntries;
   }
-  return entries.filter((entry) => entry.subject && String(entry.subject.id) === state.subjectFilter);
+  return studentEntries.filter((entry) => entry.subject && String(entry.subject.id) === state.subjectFilter);
 }
 
 function entriesByDate() {
   const map = new Map();
-  for (const entry of filteredEntries()) {
+  filteredEntries().forEach((entry) => {
     if (!map.has(entry.date)) {
       map.set(entry.date, []);
     }
     map.get(entry.date).push(entry);
-  }
+  });
   return map;
 }
 
 function chooseInitialDate() {
-  const dates = state.schedule.entries.map((entry) => entry.date).sort();
-  const localToday = todayIso();
+  const dates = filteredEntries().map((entry) => entry.date).sort();
+  const localToday = window.SiteCommon.todayIso();
+  if (!dates.length) {
+    return localToday;
+  }
   if (dates.includes(localToday)) {
     return localToday;
   }
-  return dates.find((date) => date >= localToday) || dates[0];
+  return dates.find((entryDate) => entryDate >= localToday) || dates[0];
 }
 
-function ensureSelectedDateStillVisible() {
-  const dateMap = entriesByDate();
-  if (!dateMap.has(state.selectedDate)) {
-    const availableDates = Array.from(dateMap.keys()).sort();
-    state.selectedDate = availableDates[0] || state.selectedDate;
+function chooseDateForMonth(year, monthIndex) {
+  const monthPrefix = `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
+  const localToday = window.SiteCommon.todayIso();
+  const monthDates = Array.from(entriesByDate().keys())
+    .filter((entryDate) => entryDate.startsWith(monthPrefix))
+    .sort();
+
+  if (localToday.startsWith(monthPrefix)) {
+    return monthDates.includes(localToday) ? localToday : `${monthPrefix}-01`;
+  }
+
+  return monthDates[0] || `${monthPrefix}-01`;
+}
+
+function ensureSelectedDate() {
+  if (!state.selectedDate) {
+    state.selectedDate = chooseInitialDate();
   }
 }
 
 function populateFilters() {
-  for (const subject of state.schedule.subjects) {
+  const previousValue = state.subjectFilter;
+  els.subjectFilter.innerHTML = '<option value="all">All mapped subjects and events</option>';
+  window.SiteCommon.getSubjectsForStudent(state.schedule, state.selectedStudent).forEach((subject) => {
     const option = document.createElement("option");
     option.value = String(subject.id);
     option.textContent = `${subject.name}${subject.code ? ` (${subject.code})` : ""}`;
     els.subjectFilter.appendChild(option);
-  }
-}
-
-function renderMeta() {
-  els.generatedAt.textContent = state.schedule.generated_at.replace("T", " ");
-  els.coverageRange.textContent = `${state.schedule.coverage.start_date} to ${state.schedule.coverage.end_date}`;
-  els.entryCount.textContent = `${state.schedule.source.lecture_count} lectures + ${state.schedule.source.event_count} events`;
-}
-
-function renderSubjects() {
-  els.subjectList.innerHTML = "";
-  for (const subject of state.schedule.subjects) {
-    const card = document.createElement("article");
-    card.className = "subject-card";
-    const nextEntry = filteredEntries().find(
-      (entry) => entry.subject && entry.subject.id === subject.id && entry.date >= state.selectedDate
-    );
-    card.innerHTML = `
-      <h3>${subject.name}</h3>
-      <p class="subject-meta">${subject.code || "No code"} · ${subject.credits} credits</p>
-      <p class="subject-meta">${subject.faculty || "Faculty not listed"}</p>
-      <p class="subject-meta">Range: ${subject.start_date} to ${subject.end_date}</p>
-      <p class="subject-meta">Next visible: ${nextEntry ? `${nextEntry.date} ${nextEntry.start_time}` : "No matching entry"}</p>
-    `;
-    els.subjectList.appendChild(card);
-  }
+  });
+  const stillExists = Array.from(els.subjectFilter.options).some((option) => option.value === previousValue);
+  state.subjectFilter = stillExists ? previousValue : "all";
+  els.subjectFilter.value = state.subjectFilter;
 }
 
 function renderCalendar() {
   const { year, monthIndex } = state.monthCursor;
-  els.monthLabel.textContent = formatMonthLabel(year, monthIndex);
-  els.calendarHeading.textContent = formatMonthLabel(year, monthIndex);
+  els.monthLabel.textContent = window.SiteCommon.formatMonthLabel(year, monthIndex);
+  els.calendarHeading.textContent = window.SiteCommon.formatMonthLabel(year, monthIndex);
   els.calendarGrid.innerHTML = "";
 
-  const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  for (const weekday of weekdays) {
+  ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].forEach((weekday) => {
     const cell = document.createElement("div");
     cell.className = "calendar-weekday";
     cell.textContent = weekday;
     els.calendarGrid.appendChild(cell);
-  }
+  });
 
   const dateMap = entriesByDate();
   const first = new Date(year, monthIndex, 1);
   const startOffset = (first.getDay() + 6) % 7;
   const gridStart = new Date(year, monthIndex, 1 - startOffset);
 
-  for (let i = 0; i < 42; i += 1) {
+  for (let index = 0; index < 42; index += 1) {
     const current = new Date(gridStart);
-    current.setDate(gridStart.getDate() + i);
-    const iso = current.toISOString().slice(0, 10);
-    const entries = (dateMap.get(iso) || []).slice().sort((a, b) => {
-      return `${a.start_time}${a.title}`.localeCompare(`${b.start_time}${b.title}`);
+    current.setDate(gridStart.getDate() + index);
+    const iso = window.SiteCommon.localIsoDate(current);
+    const entries = (dateMap.get(iso) || []).slice().sort((left, right) => {
+      return `${left.start_time}${left.title}`.localeCompare(`${right.start_time}${right.title}`);
     });
     const isCurrentMonth = current.getMonth() === monthIndex;
-    const isToday = iso === todayIso();
+    const isToday = iso === window.SiteCommon.todayIso();
     const isSelected = iso === state.selectedDate;
 
     const button = document.createElement("button");
@@ -196,9 +147,7 @@ function renderCalendar() {
         <span class="day-count">${entries.length || ""}</span>
       </div>
       <div class="dot-grid">
-        ${entries
-          .map((entry) => `<span class="dot${entry.type === "event" ? " event" : ""}"></span>`)
-          .join("")}
+        ${entries.map((entry) => `<span class="dot${entry.type === "event" ? " event" : ""}"></span>`).join("")}
       </div>
     `;
     button.addEventListener("click", () => {
@@ -234,17 +183,9 @@ function renderDayStats(dayEntries) {
 }
 
 function buildEntryCard(entry, options = {}) {
-  const compact = Boolean(options.compact);
-
-  if (compact) {
+  if (options.compact) {
     const card = document.createElement("article");
-    card.className = "entry-card timeline-entry-card";
-    const durationMinutes = Math.max(timeToMinutes(entry.end_time) - timeToMinutes(entry.start_time), 15);
-    card.classList.add(
-      durationMinutes < 60 ? "is-short" :
-      durationMinutes < 90 ? "is-medium" :
-      "is-long"
-    );
+    card.className = "entry-card timeline-entry";
     if (entry.type === "event") {
       card.classList.add("is-event");
     }
@@ -254,33 +195,15 @@ function buildEntryCard(entry, options = {}) {
         ? `Lecture ${entry.lecture_number}${entry.subject?.code ? ` · ${entry.subject.code}` : ""}`
         : `${entry.event_category || "event"}${entry.subject?.code ? ` · ${entry.subject.code}` : ""}`;
 
-    const timingLine = `${entry.start_time} - ${entry.end_time}`;
-    const detailBits = [entry.faculty || "Faculty not listed", entry.location || "Location not listed"];
-    const showDetails = durationMinutes >= 90;
-    const showSubline = durationMinutes >= 55;
-    const statusText =
-      entry.type === "event"
-        ? (entry.event_category || "Event")
-        : entry.is_cancelled
-          ? "Cancelled"
-          : entry.is_extra
-            ? "Extra"
-            : "";
-
     card.innerHTML = `
-      <div class="timeline-entry-topline">
-        <p class="timeline-entry-time">${timingLine}</p>
-        ${statusText ? `<p class="timeline-entry-status">${statusText}</p>` : ""}
-      </div>
+      <p class="timeline-entry-time">${window.SiteCommon.formatEntryWindow(entry)}</p>
       <h3 class="entry-title">${entry.title}</h3>
-      ${showSubline ? `<p class="entry-subline">${subline}</p>` : ""}
-      <p class="timeline-entry-meta">${showDetails ? detailBits.join(" · ") : subline}</p>
+      <p class="entry-subline">${subline}</p>
     `;
     return card;
   }
 
   const fragment = els.entryTemplate.content.cloneNode(true);
-  const card = fragment.querySelector(".entry-card");
   fragment.querySelector(".entry-title").textContent = entry.title;
   fragment.querySelector(".entry-subline").textContent =
     entry.type === "lecture"
@@ -288,29 +211,16 @@ function buildEntryCard(entry, options = {}) {
       : `${entry.event_category || "event"}${entry.subject?.code ? ` · ${entry.subject.code}` : ""}`;
 
   const chip = fragment.querySelector(".entry-chip");
-  chip.textContent =
-    entry.type === "lecture"
-      ? entry.is_cancelled
-        ? "Cancelled"
-        : entry.is_extra
-          ? "Extra"
-          : entry.schedule_status
-      : entry.event_category || "event";
+  chip.textContent = entry.type === "event" ? entry.event_category || "event" : entry.schedule_status;
   if (entry.type === "event") {
     chip.classList.add("event");
   }
 
   const details = [
-    ["Time", `${entry.start_time} - ${entry.end_time}`],
+    ["Time", window.SiteCommon.formatEntryWindow(entry)],
     ["Faculty", entry.faculty || "Not listed"],
     ["Location", entry.location || "Not listed"],
   ];
-  if (entry.mandatory_label) {
-    details.push(["Mandatory", entry.mandatory_label]);
-  }
-  if (entry.notes) {
-    details.push(["Notes", entry.notes]);
-  }
 
   fragment.querySelector(".entry-details").innerHTML = details
     .map(
@@ -323,7 +233,7 @@ function buildEntryCard(entry, options = {}) {
     )
     .join("");
 
-  return card;
+  return fragment.querySelector(".entry-card");
 }
 
 function buildEmptyTimelineState() {
@@ -333,7 +243,7 @@ function buildEmptyTimelineState() {
     <div class="entry-topline">
       <div>
         <h3 class="entry-title">No schedule on this date</h3>
-        <p class="entry-subline">There are no lectures or events on ${formatHumanDate(state.selectedDate)}.</p>
+        <p class="entry-subline">The logged-in student has no classes or events on ${window.SiteCommon.formatHumanDate(state.selectedDate)}.</p>
       </div>
       <span class="entry-chip">Free day</span>
     </div>
@@ -342,78 +252,30 @@ function buildEmptyTimelineState() {
 }
 
 function layoutTimelineEntries(entries) {
-  const positioned = entries.map((entry) => {
-    const startMinutes = timeToMinutes(entry.start_time);
-    const endMinutes = Math.max(timeToMinutes(entry.end_time), startMinutes + 15);
-    return {
+  return entries
+    .map((entry) => ({
       ...entry,
-      startMinutes,
-      endMinutes,
-      lane: 0,
-      laneCount: 1,
-    };
-  });
-
-  positioned.sort((left, right) => {
-    if (left.startMinutes !== right.startMinutes) {
-      return left.startMinutes - right.startMinutes;
-    }
-    if (left.endMinutes !== right.endMinutes) {
-      return right.endMinutes - left.endMinutes;
-    }
-    return left.title.localeCompare(right.title);
-  });
-
-  const clusters = [];
-  for (const item of positioned) {
-    const currentCluster = clusters[clusters.length - 1];
-    if (!currentCluster || item.startMinutes >= currentCluster.endMinutes) {
-      clusters.push({
-        items: [item],
-        endMinutes: item.endMinutes,
-      });
-      continue;
-    }
-
-    currentCluster.items.push(item);
-    currentCluster.endMinutes = Math.max(currentCluster.endMinutes, item.endMinutes);
-  }
-
-  for (const cluster of clusters) {
-    const laneEndTimes = [];
-    let maxLanes = 0;
-
-    for (const item of cluster.items) {
-      let lane = laneEndTimes.findIndex((endMinutes) => endMinutes <= item.startMinutes);
-      if (lane === -1) {
-        lane = laneEndTimes.length;
-        laneEndTimes.push(item.endMinutes);
-      } else {
-        laneEndTimes[lane] = item.endMinutes;
+      startMinutes: window.SiteCommon.timeToMinutes(entry.start_time),
+      endMinutes: Math.max(window.SiteCommon.timeToMinutes(entry.end_time), window.SiteCommon.timeToMinutes(entry.start_time) + 15),
+    }))
+    .sort((left, right) => {
+      if (left.startMinutes !== right.startMinutes) {
+        return left.startMinutes - right.startMinutes;
       }
-      item.lane = lane;
-      maxLanes = Math.max(maxLanes, laneEndTimes.length);
-    }
-
-    for (const item of cluster.items) {
-      item.laneCount = maxLanes;
-    }
-  }
-
-  return positioned;
+      return left.title.localeCompare(right.title);
+    });
 }
 
 function renderTimeline() {
   const dayEntries = filteredEntries()
     .filter((entry) => entry.date === state.selectedDate)
-    .sort((a, b) => `${a.start_time}${a.title}`.localeCompare(`${b.start_time}${b.title}`));
+    .sort((left, right) => `${left.start_time}${left.title}`.localeCompare(`${right.start_time}${right.title}`));
 
-  els.selectedDayHeading.textContent = formatHumanDate(state.selectedDate);
-  els.timelineHeading.textContent = formatHumanDate(state.selectedDate);
+  els.selectedDayHeading.textContent = window.SiteCommon.formatHumanDate(state.selectedDate);
+  els.timelineHeading.textContent = window.SiteCommon.formatHumanDate(state.selectedDate);
   renderDayStats(dayEntries);
   els.timeline.innerHTML = "";
 
-  const lunchSlot = state.schedule.slots.find((slot) => slot.kind === "lunch");
   if (!dayEntries.length) {
     els.timeline.appendChild(buildEmptyTimelineState());
     return;
@@ -428,9 +290,12 @@ function renderTimeline() {
   const canvas = document.createElement("div");
   canvas.className = "timeline-canvas";
 
+  const dayColumn = document.createElement("div");
+  dayColumn.className = "timeline-day-column";
+  canvas.appendChild(dayColumn);
+
   for (let hour = 0; hour <= 24; hour += 1) {
     const ratio = (hour / 24) * 100;
-
     const label = document.createElement("div");
     label.className = "timeline-scale-label";
     label.style.top = `${ratio}%`;
@@ -441,49 +306,36 @@ function renderTimeline() {
       const line = document.createElement("div");
       line.className = "timeline-hour-line";
       line.style.top = `${ratio}%`;
-      canvas.appendChild(line);
+      dayColumn.appendChild(line);
 
       const halfHourLine = document.createElement("div");
       halfHourLine.className = "timeline-half-hour-line";
       halfHourLine.style.top = `${((hour + 0.5) / 24) * 100}%`;
-      canvas.appendChild(halfHourLine);
+      dayColumn.appendChild(halfHourLine);
     }
   }
 
+  const lunchSlot = state.schedule.slots.find((slot) => slot.kind === "lunch");
   if (lunchSlot) {
     const lunchBand = document.createElement("div");
     lunchBand.className = "timeline-lunch-band";
-    lunchBand.style.top = `${(timeToMinutes(lunchSlot.start_time) / (24 * 60)) * 100}%`;
-    lunchBand.style.height = `${((timeToMinutes(lunchSlot.end_time) - timeToMinutes(lunchSlot.start_time)) / (24 * 60)) * 100}%`;
+    lunchBand.style.top = `${(window.SiteCommon.timeToMinutes(lunchSlot.start_time) / (24 * 60)) * 100}%`;
+    lunchBand.style.height = `${((window.SiteCommon.timeToMinutes(lunchSlot.end_time) - window.SiteCommon.timeToMinutes(lunchSlot.start_time)) / (24 * 60)) * 100}%`;
     lunchBand.innerHTML = `
       <span>Lunch Time</span>
       <small>${lunchSlot.start_time} - ${lunchSlot.end_time}</small>
     `;
-    canvas.appendChild(lunchBand);
+    dayColumn.appendChild(lunchBand);
   }
 
-  const positionedEntries = layoutTimelineEntries(dayEntries);
-  for (const entry of positionedEntries) {
-    const entryCard = buildEntryCard(entry, { compact: true });
-    entryCard.classList.add("timeline-entry");
-
-    const top = (entry.startMinutes / (24 * 60)) * 100;
-    const height = ((entry.endMinutes - entry.startMinutes) / (24 * 60)) * 100;
-    const laneWidth = 100 / entry.laneCount;
-    const laneLeft = laneWidth * entry.lane;
-
-    entryCard.style.top = `${top}%`;
-    entryCard.style.height = `${height}%`;
-    if (entry.laneCount === 1) {
-      entryCard.style.left = "16px";
-      entryCard.style.width = "min(620px, calc(100% - 32px))";
-    } else {
-      entryCard.style.left = `calc(${laneLeft}% + 8px)`;
-      entryCard.style.width = `calc(${laneWidth}% - 16px)`;
-    }
-
-    canvas.appendChild(entryCard);
-  }
+  layoutTimelineEntries(dayEntries).forEach((entry) => {
+    const card = buildEntryCard(entry, { compact: true });
+    card.style.top = `${(entry.startMinutes / (24 * 60)) * 100}%`;
+    card.style.height = `${((entry.endMinutes - entry.startMinutes) / (24 * 60)) * 100}%`;
+    card.style.left = "18px";
+    card.style.right = "18px";
+    dayColumn.appendChild(card);
+  });
 
   shell.appendChild(scale);
   shell.appendChild(canvas);
@@ -491,61 +343,37 @@ function renderTimeline() {
 }
 
 function render() {
-  ensureSelectedDateStillVisible();
+  ensureSelectedDate();
   renderCalendar();
-  renderSubjects();
   renderTimeline();
 }
 
-function updateViewButtons() {
-  const isMobile = state.viewMode === "mobile";
-  els.mobileViewButton.classList.toggle("is-active", isMobile);
-  els.desktopViewButton.classList.toggle("is-active", !isMobile);
-  els.mobileViewButton.setAttribute("aria-pressed", String(isMobile));
-  els.desktopViewButton.setAttribute("aria-pressed", String(!isMobile));
-}
-
-function applyViewMode(viewMode, persistPreference = true) {
-  state.viewMode = viewMode === "desktop" ? "desktop" : "mobile";
-  els.body.classList.toggle("mobile-view", state.viewMode === "mobile");
-  els.body.classList.toggle("desktop-view", state.viewMode === "desktop");
-  updateViewButtons();
-
-  if (persistPreference) {
-    try {
-      window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, state.viewMode);
-    } catch (_error) {
-      // Ignore localStorage failures and keep the current in-memory view mode.
-    }
-  }
-}
-
-function preferredViewMode() {
-  try {
-    const savedValue = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
-    return savedValue === "desktop" ? "desktop" : "mobile";
-  } catch (_error) {
-    return "mobile";
-  }
-}
-
 async function init() {
-  applyViewMode(preferredViewMode(), false);
+  [state.schedule, state.directory] = await Promise.all([
+    window.SiteCommon.loadScheduleData(),
+    window.SiteCommon.loadStudentDirectory(),
+  ]);
 
-  if (window.__STATIC_SCHEDULE_DATA__) {
-    state.schedule = window.__STATIC_SCHEDULE_DATA__;
-  } else {
-    const response = await fetch("./schedule.json");
-    if (!response.ok) {
-      throw new Error(`Could not load schedule.json (${response.status})`);
-    }
-
-    state.schedule = await response.json();
+  state.selectedStudent = window.SiteCommon.requireLoggedInStudent(state.directory);
+  if (!state.selectedStudent) {
+    return;
   }
+
+  window.SiteCommon.hydrateStudentSummary({
+    directory: state.directory,
+    schedule: state.schedule,
+    student: state.selectedStudent,
+    nameElement: els.studentName,
+    codeElement: els.studentCode,
+    sectionElement: els.studentSection,
+    courseCountElement: els.studentCourseCount,
+    nextClassElement: els.studentNextClass,
+    switchButton: els.switchPersonButton,
+  });
+
+  populateFilters();
   state.selectedDate = chooseInitialDate();
   state.monthCursor = parseMonthCursor(monthKeyFromDate(state.selectedDate));
-  renderMeta();
-  populateFilters();
   render();
 
   els.subjectFilter.addEventListener("change", (event) => {
@@ -556,13 +384,15 @@ async function init() {
   els.prevMonth.addEventListener("click", () => {
     const next = new Date(state.monthCursor.year, state.monthCursor.monthIndex - 1, 1);
     state.monthCursor = { year: next.getFullYear(), monthIndex: next.getMonth() };
-    renderCalendar();
+    state.selectedDate = chooseDateForMonth(state.monthCursor.year, state.monthCursor.monthIndex);
+    render();
   });
 
   els.nextMonth.addEventListener("click", () => {
     const next = new Date(state.monthCursor.year, state.monthCursor.monthIndex + 1, 1);
     state.monthCursor = { year: next.getFullYear(), monthIndex: next.getMonth() };
-    renderCalendar();
+    state.selectedDate = chooseDateForMonth(state.monthCursor.year, state.monthCursor.monthIndex);
+    render();
   });
 
   els.todayButton.addEventListener("click", () => {
@@ -570,24 +400,15 @@ async function init() {
     state.monthCursor = parseMonthCursor(monthKeyFromDate(state.selectedDate));
     render();
   });
-
-  els.mobileViewButton.addEventListener("click", () => {
-    applyViewMode("mobile");
-  });
-
-  els.desktopViewButton.addEventListener("click", () => {
-    applyViewMode("desktop");
-  });
 }
 
 init().catch((error) => {
   document.body.innerHTML = `
     <main class="site-shell">
       <section class="panel">
-        <p class="eyebrow">Static Schedule Snapshot</p>
-        <h1>Could not load schedule data</h1>
+        <p class="eyebrow">Calendar</p>
+        <h1>Could not load the TAPMI calendar</h1>
         <p class="hero-copy">${error.message}</p>
-        <p class="hero-copy">If you regenerated the site, make sure <code>schedule-data.js</code> exists next to <code>index.html</code>. A local server like <code>python -m http.server</code> still works too.</p>
       </section>
     </main>
   `;
