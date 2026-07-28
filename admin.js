@@ -14,7 +14,12 @@ const adminEls = {
   eventId: document.getElementById("event-id"),
   titleInput: document.getElementById("title-input"),
   dateInput: document.getElementById("date-input"),
+  timingModeInput: document.getElementById("timing-mode-input"),
+  slotField: document.getElementById("slot-field"),
+  slotInput: document.getElementById("slot-input"),
+  startTimeField: document.getElementById("start-time-field"),
   startTimeInput: document.getElementById("start-time-input"),
+  endTimeField: document.getElementById("end-time-field"),
   endTimeInput: document.getElementById("end-time-input"),
   categoryInput: document.getElementById("category-input"),
   subjectInput: document.getElementById("subject-input"),
@@ -73,6 +78,46 @@ function populateSubjectOptions() {
   }
 }
 
+function slotKey(slot) {
+  return `${slot.start_time}|${slot.end_time}|${slot.label}`;
+}
+
+function slotOptions() {
+  return adminState.schedule?.slots || [];
+}
+
+function populateSlotOptions() {
+  adminEls.slotInput.innerHTML = '<option value="">Choose a slot</option>';
+  for (const slot of slotOptions()) {
+    const option = document.createElement("option");
+    option.value = slotKey(slot);
+    option.textContent = `${slot.label} · ${slot.start_time} - ${slot.end_time}`;
+    adminEls.slotInput.appendChild(option);
+  }
+}
+
+function findMatchingSlot(startTime, endTime) {
+  return slotOptions().find((slot) => slot.start_time === startTime && slot.end_time === endTime) || null;
+}
+
+function syncTimingModeUi() {
+  const isManual = adminEls.timingModeInput.value === "manual";
+  adminEls.slotField.classList.toggle("is-hidden", isManual);
+  adminEls.startTimeField.classList.toggle("is-hidden", !isManual);
+  adminEls.endTimeField.classList.toggle("is-hidden", !isManual);
+  adminEls.startTimeInput.required = isManual;
+  adminEls.endTimeInput.required = isManual;
+  adminEls.slotInput.required = !isManual;
+
+  if (!isManual) {
+    const selectedSlot = slotOptions().find((slot) => slotKey(slot) === adminEls.slotInput.value);
+    if (selectedSlot) {
+      adminEls.startTimeInput.value = selectedSlot.start_time;
+      adminEls.endTimeInput.value = selectedSlot.end_time;
+    }
+  }
+}
+
 function currentEvents() {
   return (adminState.schedule?.entries || [])
     .filter((entry) => entry.type === "event")
@@ -95,6 +140,8 @@ function resetForm() {
   adminEls.eventForm.reset();
   adminEls.eventId.value = "";
   adminEls.formHeading.textContent = "Add new event";
+  adminEls.timingModeInput.value = "slot";
+  syncTimingModeUi();
 }
 
 function fillForm(event) {
@@ -104,11 +151,15 @@ function fillForm(event) {
   adminEls.dateInput.value = event.date || "";
   adminEls.startTimeInput.value = event.start_time || "";
   adminEls.endTimeInput.value = event.end_time || "";
+  const matchingSlot = findMatchingSlot(event.start_time, event.end_time);
+  adminEls.timingModeInput.value = matchingSlot ? "slot" : "manual";
+  adminEls.slotInput.value = matchingSlot ? slotKey(matchingSlot) : "";
   adminEls.categoryInput.value = event.event_category || "general";
   adminEls.subjectInput.value = event.subject?.id ? String(event.subject.id) : "";
   adminEls.locationInput.value = event.location || "";
   adminEls.notesInput.value = event.notes || "";
   adminEls.formHeading.textContent = `Edit event: ${event.title}`;
+  syncTimingModeUi();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -170,19 +221,38 @@ async function loadEditor() {
   });
   adminState.schedule = payload.schedule;
   populateSubjectOptions();
+  populateSlotOptions();
   renderEventList();
   adminEls.authPanel.classList.add("is-hidden");
   adminEls.editorPanel.classList.remove("is-hidden");
+  syncTimingModeUi();
   showStatus("Editor unlocked.", "success");
 }
 
 function eventPayloadFromForm() {
+  const isManual = adminEls.timingModeInput.value === "manual";
+  let startTime = adminEls.startTimeInput.value;
+  let endTime = adminEls.endTimeInput.value;
+  let slotLabel = "";
+
+  if (!isManual) {
+    const selectedSlot = slotOptions().find((slot) => slotKey(slot) === adminEls.slotInput.value);
+    if (selectedSlot) {
+      startTime = selectedSlot.start_time;
+      endTime = selectedSlot.end_time;
+      slotLabel = selectedSlot.label;
+    }
+  }
+
   return {
     id: adminEls.eventId.value.trim(),
     title: adminEls.titleInput.value.trim(),
     date: adminEls.dateInput.value,
-    startTime: adminEls.startTimeInput.value,
-    endTime: adminEls.endTimeInput.value,
+    startTime,
+    endTime,
+    timingMode: adminEls.timingModeInput.value,
+    slotValue: adminEls.slotInput.value,
+    slotLabel,
     category: adminEls.categoryInput.value,
     subjectId: adminEls.subjectInput.value,
     location: adminEls.locationInput.value.trim(),
@@ -200,6 +270,14 @@ adminEls.authForm.addEventListener("submit", async (event) => {
     adminState.password = "";
     showStatus(error.message, "error");
   }
+});
+
+adminEls.timingModeInput.addEventListener("change", () => {
+  syncTimingModeUi();
+});
+
+adminEls.slotInput.addEventListener("change", () => {
+  syncTimingModeUi();
 });
 
 adminEls.eventForm.addEventListener("submit", async (event) => {

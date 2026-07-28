@@ -339,6 +339,7 @@ select {
   grid-template-columns: 120px 34px minmax(0, 1fr);
   gap: 18px;
   align-items: start;
+  min-height: 108px;
 }
 
 .timeline-time {
@@ -394,6 +395,10 @@ select {
 
 .entry-card.empty {
   opacity: 0.8;
+}
+
+.entry-card.compact {
+  padding: 14px 18px;
 }
 
 .entry-card.lunch {

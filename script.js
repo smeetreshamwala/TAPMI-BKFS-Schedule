@@ -40,6 +40,16 @@ function formatMonthLabel(year, monthIndex) {
   });
 }
 
+function formatHourLabel(hour) {
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+  return `${displayHour}:00 ${suffix}`;
+}
+
+function getHourNumber(timeValue) {
+  return Number.parseInt(String(timeValue || "0").split(":")[0], 10);
+}
+
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -250,6 +260,36 @@ function buildEntryCard(entry) {
   return fragment;
 }
 
+function buildEmptyHourCard(hour) {
+  const empty = document.createElement("article");
+  empty.className = "entry-card empty compact";
+  empty.innerHTML = `
+    <div class="entry-topline">
+      <div>
+        <h3 class="entry-title">No scheduled item</h3>
+        <p class="entry-subline">Nothing starts during the ${formatHourLabel(hour)} block.</p>
+      </div>
+      <span class="entry-chip">Free</span>
+    </div>
+  `;
+  return empty;
+}
+
+function buildLunchCard() {
+  const lunch = document.createElement("article");
+  lunch.className = "entry-card lunch compact";
+  lunch.innerHTML = `
+    <div class="entry-topline">
+      <div>
+        <h3 class="entry-title">Lunch Time</h3>
+        <p class="entry-subline">Compulsory break · 1:00 PM to 2:30 PM</p>
+      </div>
+      <span class="entry-chip">Break</span>
+    </div>
+  `;
+  return lunch;
+}
+
 function renderTimeline() {
   const dayEntries = filteredEntries()
     .filter((entry) => entry.date === state.selectedDate)
@@ -260,17 +300,19 @@ function renderTimeline() {
   renderDayStats(dayEntries);
   els.timeline.innerHTML = "";
 
-  for (const slot of state.schedule.slots) {
+  const lunchSlot = state.schedule.slots.find((slot) => slot.kind === "lunch");
+
+  for (let hour = 0; hour < 24; hour += 1) {
     const row = document.createElement("section");
     row.className = "timeline-row";
-    const entries = dayEntries.filter((entry) => entry.start_time === slot.start_time);
+    const entries = dayEntries.filter((entry) => getHourNumber(entry.start_time) === hour);
 
     const time = document.createElement("div");
     time.className = "timeline-time";
     time.innerHTML = `
-      <strong>${slot.label}</strong>
-      <span>${slot.start_time}</span>
-      <span>${slot.end_time}</span>
+      <strong>${formatHourLabel(hour)}</strong>
+      <span>${hour.toString().padStart(2, "0")}:00</span>
+      <span>${(hour + 1).toString().padStart(2, "0")}:00</span>
     `;
 
     const rail = document.createElement("div");
@@ -280,36 +322,18 @@ function renderTimeline() {
     const stack = document.createElement("div");
     stack.className = "slot-stack";
 
-    if (slot.kind === "lunch") {
-      const lunch = document.createElement("article");
-      lunch.className = "entry-card lunch";
-      lunch.innerHTML = `
-        <div class="entry-topline">
-          <div>
-            <h3 class="entry-title">Lunch Time</h3>
-            <p class="entry-subline">Compulsory break · No class or attendance action</p>
-          </div>
-          <span class="entry-chip">Break</span>
-        </div>
-      `;
-      stack.appendChild(lunch);
-    } else if (entries.length) {
+    if (lunchSlot && getHourNumber(lunchSlot.start_time) === hour) {
+      stack.appendChild(buildLunchCard());
+    }
+
+    if (entries.length) {
       for (const entry of entries) {
         stack.appendChild(buildEntryCard(entry));
       }
-    } else {
-      const empty = document.createElement("article");
-      empty.className = "entry-card empty";
-      empty.innerHTML = `
-        <div class="entry-topline">
-          <div>
-            <h3 class="entry-title">Empty Slot</h3>
-            <p class="entry-subline">No schedule entry in this slot for ${formatHumanDate(state.selectedDate)}.</p>
-          </div>
-          <span class="entry-chip">Free</span>
-        </div>
-      `;
-      stack.appendChild(empty);
+    }
+
+    if (!stack.children.length) {
+      stack.appendChild(buildEmptyHourCard(hour));
     }
 
     row.appendChild(time);

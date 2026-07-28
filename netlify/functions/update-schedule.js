@@ -47,9 +47,9 @@ function deriveDayName(isoDate) {
   return parsed.toLocaleDateString("en-US", { weekday: "long" });
 }
 
-function slotLabelFor(startTime, slots) {
-  const slot = (slots || []).find((item) => item.start_time === startTime);
-  return slot ? slot.label : "Custom Slot";
+function slotLabelFor(startTime, endTime, slots) {
+  const slot = (slots || []).find((item) => item.start_time === startTime && item.end_time === endTime);
+  return slot ? slot.label : "Manual Time";
 }
 
 function githubHeaders() {
@@ -134,6 +134,7 @@ function buildEventFromInput(input, schedule, existingEventId = "") {
   const eventDate = input.date;
   const startTime = normalizeTime(input.startTime);
   const endTime = normalizeTime(input.endTime);
+  const timingMode = input.timingMode === "manual" ? "manual" : "slot";
   const category = input.category || "general";
   const stableSlug = slugify(input.title) || "event";
 
@@ -146,7 +147,10 @@ function buildEventFromInput(input, schedule, existingEventId = "") {
     day_type: "",
     start_time: startTime,
     end_time: endTime,
-    slot_label: slotLabelFor(startTime, schedule.slots),
+    slot_label:
+      timingMode === "slot" && input.slotLabel
+        ? input.slotLabel
+        : slotLabelFor(startTime, endTime, schedule.slots),
     title: input.title,
     subject: linkedSubject,
     lecture_number: null,
@@ -165,6 +169,7 @@ function buildEventFromInput(input, schedule, existingEventId = "") {
     audience_scope: "all",
     audience_value: "",
     notes: input.notes || "",
+    timing_mode: timingMode,
     source: {
       sheet: "Admin Editor",
       cell: "",
@@ -184,6 +189,9 @@ function validateEventInput(input) {
   }
   if (!String(input.startTime || "").trim() || !String(input.endTime || "").trim()) {
     throw new Error("Choose both start and end time.");
+  }
+  if ((input.timingMode || "slot") === "slot" && !String(input.slotValue || "").trim()) {
+    throw new Error("Choose one of the fixed slots.");
   }
   if (normalizeTime(input.startTime) >= normalizeTime(input.endTime)) {
     throw new Error("End time must be later than start time.");

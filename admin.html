@@ -84,12 +84,25 @@
                 <span>Date</span>
                 <input id="date-input" name="date" type="date" required />
               </label>
+              <label class="field">
+                <span>Timing mode</span>
+                <select id="timing-mode-input" name="timingMode">
+                  <option value="slot">Fixed slot</option>
+                  <option value="manual">Manual time</option>
+                </select>
+              </label>
+              <label class="field" id="slot-field">
+                <span>Slot</span>
+                <select id="slot-input" name="slot">
+                  <option value="">Choose a slot</option>
+                </select>
+              </label>
               <div class="field-row">
-                <label class="field">
+                <label class="field" id="start-time-field">
                   <span>Start time</span>
                   <input id="start-time-input" name="startTime" type="time" required />
                 </label>
-                <label class="field">
+                <label class="field" id="end-time-field">
                   <span>End time</span>
                   <input id="end-time-input" name="endTime" type="time" required />
                 </label>
