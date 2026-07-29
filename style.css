@@ -381,9 +381,32 @@ textarea {
   margin-bottom: 8px;
 }
 
+.subject-select-card {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.subject-select-card.is-selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(98, 161, 255, 0.18);
+  background: rgba(28, 47, 75, 0.94);
+}
+
 .subject-meta {
   margin-bottom: 10px;
   line-height: 1.45;
+}
+
+.subject-detail-panel {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(173, 196, 255, 0.1);
+}
+
+.subject-detail-heading {
+  margin-bottom: 12px;
 }
 
 .agenda-list {
@@ -707,5 +730,10 @@ textarea {
   .timeline-scale-label {
     right: 8px;
     font-size: 0.78rem;
+  }
+
+  .subject-detail-panel {
+    margin-top: 18px;
+    padding-top: 18px;
   }
 }
