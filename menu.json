@@ -12,7 +12,7 @@
         "Beverage": "Tea / Coffee / Milk"
       },
       "Tue": {
-        "Hot Preparation": "Idli",
+        "Hot Preparation": "Idli / Medu Vada",
         "Side Accompaniment": "Sambar & Coconut Chutney",
         "Egg Item": null,
         "Bread Counter": "Bread Butter Jam",
@@ -21,7 +21,7 @@
         "Beverage": "Tea / Coffee / Milk"
       },
       "Wed": {
-        "Hot Preparation": "Medu Vada",
+        "Hot Preparation": "Vada Pav",
         "Side Accompaniment": "Mint Chutney",
         "Egg Item": "Boiled Egg",
         "Bread Counter": "Bread Butter Jam",
@@ -30,7 +30,7 @@
         "Beverage": "Tea / Coffee / Milk"
       },
       "Thu": {
-        "Hot Preparation": "Vada Pav",
+        "Hot Preparation": "Onion Uttapam",
         "Side Accompaniment": "Sambar & Coconut Chutney",
         "Egg Item": null,
         "Bread Counter": "Bread Butter Jam",
@@ -39,7 +39,7 @@
         "Beverage": "Tea / Coffee / Milk"
       },
       "Fri": {
-        "Hot Preparation": "Onion Uttapam",
+        "Hot Preparation": "Besan Chilla",
         "Side Accompaniment": "Green Chutney",
         "Egg Item": "Boiled Egg",
         "Bread Counter": "Bread Butter Jam",
@@ -48,7 +48,7 @@
         "Beverage": "Tea / Coffee / Milk"
       },
       "Sat": {
-        "Hot Preparation": "Besan Chilla",
+        "Hot Preparation": "Palak Puri, Aloo Bhaji",
         "Side Accompaniment": null,
         "Egg Item": "Egg Bhurji (one time)",
         "Bread Counter": "Bread Butter Jam",
