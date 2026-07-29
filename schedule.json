@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-07-28T22:43",
+  "generated_at": "2026-07-29T02:40",
   "source": {
     "type": "sqlite",
     "database_path": "attendance_tracker_app/attendance.db",
     "lecture_count": 135,
-    "event_count": 4,
+    "event_count": 5,
     "subject_count": 9
   },
   "coverage": {
@@ -2148,6 +2148,40 @@
       "source": {
         "sheet": "MBA-BKFS",
         "cell": "H24"
+      }
+    },
+    {
+      "id": "event-admin-1785292827492",
+      "raw_id": null,
+      "type": "event",
+      "date": "2026-07-29",
+      "day_name": "Wednesday",
+      "day_type": "",
+      "start_time": "20:00",
+      "end_time": "23:00",
+      "slot_label": "Manual Time",
+      "title": "Career Carve CV Builder",
+      "subject": null,
+      "lecture_number": null,
+      "faculty": "",
+      "faculty_abbreviation": "",
+      "location": "Online",
+      "lecture_type": "",
+      "batch_division": "",
+      "attendance_tracked": false,
+      "schedule_status": "event",
+      "is_cancelled": false,
+      "is_extra": false,
+      "mandatory_label": "",
+      "stable_id": "SPECIAL|pace_meeting|global|admin|career-carve-cv-builder|2026-07-29|20:00|23:00",
+      "event_category": "pace_meeting",
+      "audience_scope": "all",
+      "audience_value": "",
+      "notes": "1) Fully charged laptop to last 3 hours\n2) Old resume soft copy\n3) All term 3 and term 4 projects (academic, live, corporate) write up or project summary in soft copy\n\n4) SIP write up or executive summary with key details in soft copy\n\n5) Brief write up of all clubs, committees, PORs and extra curricular",
+      "timing_mode": "manual",
+      "source": {
+        "sheet": "Admin Editor",
+        "cell": ""
       }
     },
     {
