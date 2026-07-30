@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-07-29T02:40",
+  "generated_at": "2026-07-30T03:34",
   "source": {
     "type": "sqlite",
     "database_path": "attendance_tracker_app/attendance.db",
     "lecture_count": 135,
-    "event_count": 5,
+    "event_count": 6,
     "subject_count": 9
   },
   "coverage": {
@@ -2900,6 +2900,53 @@
       "source": {
         "sheet": "MBA-BKFS",
         "cell": "F28"
+      }
+    },
+    {
+      "id": "event-admin-1785382465909",
+      "raw_id": null,
+      "type": "event",
+      "date": "2026-08-03",
+      "day_name": "Monday",
+      "day_type": "",
+      "start_time": "09:30",
+      "end_time": "09:45",
+      "slot_label": "Manual Time",
+      "title": "Insurance Mgmt Quiz",
+      "subject": {
+        "id": 12,
+        "name": "Insurance Management",
+        "code": "BFS 6338",
+        "credits": 2,
+        "expected_lecture_count": 16,
+        "faculty": "Prof. Sudeep Kumar",
+        "start_date": "2026-07-20",
+        "end_date": "2026-08-24",
+        "location": "G1",
+        "lecture_type": "Lecture",
+        "batch_division": "",
+        "schedule_summary": "Friday 17:45-19:00, Monday 16:00-17:15, Monday 17:45-19:00, Saturday 16:00-17:15, Sunday 10:15-11:30, Sunday 14:30-15:45, Thursday 16:00-17:15, Thursday 17:45-19:00, Tuesday 17:45-19:00, Wednesday 16:00-17:15"
+      },
+      "lecture_number": null,
+      "faculty": "Prof. Sudeep Kumar",
+      "faculty_abbreviation": "",
+      "location": "CC Lab",
+      "lecture_type": "",
+      "batch_division": "",
+      "attendance_tracked": false,
+      "schedule_status": "event",
+      "is_cancelled": false,
+      "is_extra": false,
+      "mandatory_label": "",
+      "stable_id": "SPECIAL|quiz|12|admin|insurance-mgmt-quiz|2026-08-03|09:30|09:45",
+      "event_category": "quiz",
+      "audience_scope": "all",
+      "audience_value": "",
+      "notes": "",
+      "timing_mode": "manual",
+      "source": {
+        "sheet": "Admin Editor",
+        "cell": ""
       }
     },
     {
